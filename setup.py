@@ -2,14 +2,14 @@ from distutils.core import setup
 
 from setuptools import find_packages
 
-with open('README.rst', 'r', encoding='utf-8') as f:
+with open('README.md', 'r', encoding='utf-8') as f:
     long_description = f.read()
 
-setup(name='descriptor',
+setup(name='field-descriptor',
       version='1.0.0',
       description='A descriptor package',
       long_description=long_description,
-      long_description_content_type='text/x-rst',
+      long_description_content_type='text/markdown',
       author='BlueWhaleMain',
       author_email='bluewhalemain@outlook.com',
       python_requires='>=3.6.0',
