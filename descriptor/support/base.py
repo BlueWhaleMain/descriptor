@@ -1,3 +1,4 @@
+import logging
 import typing
 
 from descriptor.base import TransientField
@@ -31,18 +32,36 @@ class BaseEncoder(Encoder[typing.Any, typing.Any]):
         return obj
 
 
+_logger = logging.getLogger(__name__)
+
+
 class BaseDecoder(Decoder[typing.Any, typing.Any]):
-    def __init__(self, t: typing.Optional[type]):
-        self._cls: typing.Optional[type] = t
+    def __init__(self, t: typing.Union[type, typing.Any]):
+        self._cls: typing.Union[type, typing.Any] = t
         self._stack: typing.List[str] = []
 
     def decode(self, data: typing.Any) -> typing.Any:
         self._stack.clear()
         return self._default(self._cls, data)
 
-    def _default(self, t: typing.Optional[type], val: typing.Any) -> typing.Any:
-        # 嵌套处理
+    def _default(self, t: typing.Union[type, typing.Any], val: typing.Any) -> typing.Any:
+        if t is typing.Any:
+            return val
         t, args = ga_get(t)
+        if t is typing.Union:
+            for xt in args:
+                try:
+                    return self._default(xt, val)
+                # 因此，不建议在数据类中使用可选类型，这将导致不明确的结果
+                except Exception as e:
+                    _logger.debug(e)
+            else:
+                self._stack.append(f'<@[{",".join(args)}]>')
+                raise ParameterTypeError(''.join(self._stack), type(val))
+        elif not isinstance(t, type):
+            self._stack.append(f'<!{t}[{",".join(args)}]>')
+            raise TypeError(''.join(self._stack), t)
+        # 嵌套处理
         if issubclass(t, Serializable):
             if isinstance(val, dict):
                 instance = t()

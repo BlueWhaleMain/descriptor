@@ -3,21 +3,17 @@
 import typing
 
 
-def ga_get(t: typing.Optional[type]) -> typing.Tuple[type, tuple]:
+def ga_get(t: typing.Union[type, typing.Any]) -> typing.Tuple[type, tuple]:
     """  Obtain generic alias. """
-    try:
-        # typing._GenericAlias
-        ta = getattr(t, '__args__')
-        t = getattr(t, '__origin__')
+    ta = typing.get_args(t)
+    if not isinstance(t, type):
+        t = typing.get_origin(t)
+    if t is not None:
         return t, ta
-    except AttributeError:
-        pass
-    if isinstance(t, type):
-        return t, ()
     raise TypeError(t)
 
 
-def ga_chk(tl: typing.Optional[type], tr: typing.Optional[type]) -> typing.Tuple[type, tuple]:
+def ga_chk(tl: typing.Union[type, typing.Any], tr: typing.Union[type, typing.Any]) -> typing.Tuple[type, tuple]:
     """ generic alias check """
     tl, tla = ga_get(tl)
     tr, tra = ga_get(tr)
@@ -35,13 +31,31 @@ def ga_instance_get(val: typing.Any) -> typing.Tuple[type, tuple]:
     try:
         return ga_get(val)
     except TypeError:
-        return type(val), ()
+        try:
+            return ga_get(type(val))
+        except TypeError:
+            return type(val), typing.get_args(val)
 
 
-def ga_instance_chk(val: typing.Any, t: typing.Optional[type]) -> bool:
+_function_type = type(ga_get)
+
+
+def ga_instance_chk(val: typing.Any, t: typing.Union[type, typing.Any]) -> bool:
     """ generic instance check """
+    # Any无法获取到类型因为没有[]
+    if t is typing.Any:
+        return True
     t, args = ga_get(t)
-    if not isinstance(val, t):
+    if t is typing.Union:
+        for xt in args:
+            if ga_instance_chk(val, xt):
+                break
+        else:
+            return False
+    elif t is typing.Callable:
+        if isinstance(val, _function_type):
+            return True
+    elif not isinstance(val, t):
         return False
     if isinstance(val, dict) and len(args) == 2:
         for k, v in val.items():
@@ -56,7 +70,7 @@ def ga_instance_chk(val: typing.Any, t: typing.Optional[type]) -> bool:
     return True
 
 
-def annotation_get(cls: type, attr_name: str) -> typing.Optional[type]:
+def annotation_get(cls: type, attr_name: str) -> typing.Union[type, typing.Any]:
     _cls = cls
     while True:
         try:

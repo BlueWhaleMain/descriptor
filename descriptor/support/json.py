@@ -12,6 +12,7 @@ class JSONEncoder(json.JSONEncoder):
         return BaseEncoder().encode(o)
 
 
+# Issue:钩子无法解析具有层级的json结构，层级结构会掩盖
 class HookFactory:
     @classmethod
     def make_hook(cls, decoder: Decoder):
