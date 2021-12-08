@@ -4,3 +4,4 @@ log
 build
 dist
 *.egg-info
+HELP.md
